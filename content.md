@@ -33,7 +33,7 @@
 
 ## Level 4: Kubernetes and DevSecOps
 
-- Kubernetes architecture and workloads (CKA-## Level)
+- Kubernetes architecture and workloads (CKA-Level)
 - AKS and Rancher, Helm, ingress and networking
 - Observability with Prometheus, Grafana and alerting
 - DevSecOps: Trivy, Gitleaks, Bandit, policy as code
