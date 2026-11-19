@@ -66,3 +66,11 @@ Traditional gateways (like NGINX, Envoy, and Traefik) are built for standard web
 
 > **Note:** **Stateless** treats each request on its own without remembering past interactions, while **stateful** keeps context or session history across requests and ongoing tasks.
 
+---
+---
+
+## LLM Gateway Overview
+
+This allows you to seamlessly switch between LLM providers without changing your application code.
+
+You can route traffic to upstream providers such as **OpenAI**, **Anthropic**, **Gemini**, **Google AI**, and more—pretty much any **OpenAI-compatible provider** that supports chat completions and streaming.
