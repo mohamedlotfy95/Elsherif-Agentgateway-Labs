@@ -7,6 +7,12 @@ When users and AI agents call LLM models directly:
 * **No Visibility:** You cannot easily see who is making requests or how many tokens are being used.
 * **No Observability:** It is hard to track errors, slow responses, or agent behavior.
 * **Security Risks:** API keys are spread across different apps and agents, making them hard to protect and manage.
+```text
+[User] -------------> [OpenAI]      (No Visibility)
+[Mobile App] -------> [Anthropic]   (No Security)
+[AI Agent] ---------> [Gemini]      (Unmanaged Traffic)
+[Automated Script] -> [Llama 3]     (Fragmented API Keys)
+```
 
 ### The Solution
 An Agent Gateway gives you **one single endpoint** for all LLM requests. From one central place, you get:
@@ -14,4 +20,14 @@ An Agent Gateway gives you **one single endpoint** for all LLM requests. From on
 * **Traffic Control:** Manage rate limits, route requests, and switch models easily.
 * **Visibility & Observability:** Monitor usage, costs, logs, and performance in real time.
 
-![alt text](image.png)
+
+
+```text
+[User] -------------\
+[Mobile App] --------\                                      +--> [OpenAI]
+[AI Agent] --------------> [ AGENT GATEWAY ]                +--> [Anthropic]
+[Automated Script] --/     (Keys, Logs,Rate Limits)         +--> [Gemini]
+                                                            +--> [Llama 3]
+```
+(All traffic is centralized, logged, secured, and rate-limited.)
+
