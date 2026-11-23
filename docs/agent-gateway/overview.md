@@ -1,3 +1,5 @@
+# Agentgateway overview
+
 ## What is an agent gateway?
 
 An **agent gateway** is a proxy that can provide a managed entry point between applications or agents and AI providers. The capabilities available depend on the gateway product and how it is configured.

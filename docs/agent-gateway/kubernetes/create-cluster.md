@@ -194,7 +194,7 @@ kubectl get secrets -n agentgateway-system
 
 Example output:
 
-```
+```text
 NAME                       TYPE     DATA   AGE
 gemini-secret              Opaque   1      102s
 ```
