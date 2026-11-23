@@ -20,3 +20,17 @@ This workshop is for learners who know the basics of Kubernetes and want to depl
 3. [Test Gemini and Claude path-based routing](docs/agent-gateway/kubernetes/curl-examples.md).
 
 The [Gateway manifest](docs/agent-gateway/kubernetes/manifests/gateway.yaml) is applied in the Kubernetes setup guide.
+
+## Documentation checks
+
+The GitHub Actions workflow runs Markdown style checks, link checks, YAML parsing, and shell syntax checks for the examples. To run the same checks locally, install Python 3, Bash, Node.js, PyYAML, `markdownlint-cli2`, and [lychee](https://lychee.cli.rs/), then run:
+
+```shell
+python -m pip install PyYAML
+npm install --global markdownlint-cli2@0.18.1
+markdownlint-cli2
+lychee --no-progress --max-retries 2 README.md docs
+python scripts/check_docs.py
+```
+
+The shell examples are syntax-checked only; they are not executed.
