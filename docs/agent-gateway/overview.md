@@ -1,76 +1,67 @@
-## What is an Agent Gateway?
+## What is an agent gateway?
 
-An **Agent Gateway** is a single entry point that sits between your users/AI agents and the LLM models.
+An **agent gateway** is a proxy that can provide a managed entry point between applications or agents and AI providers. The capabilities available depend on the gateway product and how it is configured.
 
-**The Problem**
-When users and AI agents call LLM models directly:
-- **No Visibility:** You cannot easily see who is making requests or how many tokens are being used.
-- **No Observability:** It is hard to track errors, slow responses, or agent behavior.
-- **Security Risks:** API keys are spread across different apps and agents, making them hard to protect and manage.
+### Why use one?
+
+When applications and agents call providers directly, each client may need its own provider configuration and credentials. This can make it harder to apply consistent controls, understand usage, and investigate failures.
 
 ```text
-[User] -------------> [OpenAI]      (No Visibility)
-[Mobile App] -------> [Anthropic]   (No Security)
+[User] -------------> [OpenAI]      (Limited visibility)
+[Mobile App] -------> [Anthropic]   (Credentials managed per client)
 [AI Agent] ---------> [Gemini]      (Unmanaged Traffic)
 [Automated Script] -> [Llama 3]     (Fragmented API Keys)
 ```
 
-**The Solution**
-An Agent Gateway gives you **one single endpoint** for all LLM requests. From one central place, you get:
-- **Centralized API Keys:** Store and manage all your LLM keys safely in one spot.
-- **Traffic Control:** Manage rate limits, route requests, and switch models easily.
-- **Visibility & Observability:** Monitor usage, costs, logs, and performance in real time.
+An agent gateway can give clients a common endpoint and central place to configure provider access. Depending on the implementation and policies enabled, it can provide:
+
+- **Centralized credentials:** Keep provider credentials out of individual clients. Protecting them still requires appropriate Secret access controls and cluster security.
+- **Traffic controls:** Configure request routing, rate limits, and model selection where supported.
+- **Observability:** Collect request, usage, and performance data when telemetry is configured.
+
+These controls are not automatic; they must be enabled and configured for the deployment.
 
 ```text
 [User] -------------\                                  +--> [OpenAI]
 [Mobile App] --------\                                 +--> [Anthropic]
 [AI Agent] ------------> [ AGENT GATEWAY ] ------------+--> [Gemini]
-[Automated Script] --/   (Keys, Logs, Rate Limits)     +--> [Llama 3]
+[Automated Script] --/   (Policies and telemetry)      +--> [Llama 3]
 ```
 
-**Result:** All traffic is centralized, logged, secured, and rate-limited.
+**Result:** With the relevant credentials, policies, and telemetry configured, requests can be managed through a common gateway.
 
 ---
 
 ### [Agentgateway](https://github.com/agentgateway/agentgateway)
-An open-source proxy built on AI-native protocols ([MCP](https://modelcontextprotocol.io/introduction) & [A2A](https://developers.googleblog.com/en/a2a-a-new-era-of-agent-interoperability/)) that provides drop-in security, observability, and governance for agent-to-LLM, agent-to-tool, and agent-to-agent communication across any framework and environment.
+
+Agentgateway is an open-source proxy for AI and agent traffic. It supports integrations for protocols such as [MCP](https://modelcontextprotocol.io/introduction) and [A2A](https://developers.googleblog.com/en/a2a-a-new-era-of-agent-interoperability/). See the [official project documentation](https://agentgateway.dev/docs/) for supported features and configuration requirements.
 
 ---
 
 ## Key Features
 
-Think of it like a gateway for your infrastructure that sits in front of your AI system. Here is what you get:
+Depending on the configured deployment, Agentgateway can provide features such as:
 
-1. **LLM Gateway:** Route traffic to major LLM models with budget and spend controls through one unified, OpenAI-compatible API.
-2. **Inference Routing:** Intelligently route traffic to your self-hosted models or local LLM workloads.
-3. **MCP Gateway:** Connect your LLMs to tools, external data sources, and internal or external MCPs.
-4. **A2A (Agent-to-Agent):** Enable secure, standardized communication and task handoffs between different AI agents.
-5. **Security:** Protect your AI system with centralized API keys, authentication, rate limiting, and access control.
+1. **LLM routing:** Route requests to supported providers through compatible APIs.
+2. **Inference routing:** Route traffic to supported self-hosted or local model backends.
+3. **MCP connectivity:** Connect agents to configured MCP servers and tools.
+4. **A2A connectivity:** Support communication between agents using the A2A protocol.
+5. **Policy enforcement:** Apply configured authentication, rate limits, and access controls.
 
-Ref: Official [repo](https://github.com/agentgateway/agentgateway#key-features)
-
----
-
-### Agent Gateway vs. Traditional Gateways
-Official intro video: [Introducing Agent Gateway: AI-Native Connectivity & Security](http://www.youtube.com/watch?v=SomP92JWPmE)
-
-This video explains the key differences between an Agent Gateway and traditional gateways/reverse proxies (like NGINX, Envoy, and Traefik)—specifically why **stateful** protocols and **multiplexing** across tools (MCP) and long-running agent tasks (A2A) need a purpose-built data plane [[02:46](https://www.youtube.com/watch?v=SomP92JWPmE&t=166)], [[06:29](https://www.youtube.com/watch?v=SomP92JWPmE&t=389)], [[07:52](https://www.youtube.com/watch?v=SomP92JWPmE&t=472)], [[09:49](https://www.youtube.com/watch?v=SomP92JWPmE&t=589)], [[10:13](https://www.youtube.com/watch?v=SomP92JWPmE&t=613)].
-
-## Challenges
-
-Traditional gateways (like NGINX, Envoy, and Traefik) are built for standard web traffic, and general HTTP traffic is considered stateless. This creates challenges for AI systems:
-
-1. **Limits of Basic HTTP Routing:** Regular gateways usually route traffic based only on the URL path or headers. AI workflows often need routing based on what is inside the HTTP body (such as model names or prompts).
-2. **Session Awareness (Agent-to-Agent):** Standard load balancers send traffic to random servers. When Agent A talks to Agent B, the gateway must be session-aware so requests stay connected to the right agent.
-3. **Smart MCP Tool Discovery:** When connecting to multiple internal MCP servers, the gateway needs to discover available tools across them and present them cleanly to the client.
-
-> **Note:** **Stateless** treats each request on its own without remembering past interactions, while **stateful** keeps context or session history across requests and ongoing tasks.
+Check the [official feature list](https://github.com/agentgateway/agentgateway#key-features) for current capabilities and requirements.
 
 ---
----
+
+### Agent gateways and traditional gateways
+
+Watch the official introduction: [Introducing Agent Gateway: AI-Native Connectivity & Security](https://www.youtube.com/watch?v=SomP92JWPmE).
+
+Traditional gateways can handle many HTTP routing tasks, and some can be extended for AI workloads. An agent gateway may offer AI-provider integrations or protocol-specific features without requiring the same custom extensions. Compare products by the protocols, policies, and observability they support rather than assuming a traditional gateway cannot provide them.
+
+AI requests also do not automatically make a connection stateful. Conversation history is commonly sent by the client with each request; streaming, session affinity, or other stateful behavior depends on the application and gateway configuration.
 
 ## LLM Gateway Overview
 
-This allows you to seamlessly switch between LLM providers without changing your application code.
+An LLM gateway can let applications use a consistent client interface while the gateway routes requests to configured providers. Provider-specific features and request compatibility vary.
 
-You can route traffic to upstream providers such as **OpenAI**, **Anthropic**, **Gemini**, **Google AI**, and more—pretty much any **OpenAI-compatible provider** that supports chat completions and streaming.
+Agentgateway supports integrations for providers such as **OpenAI**, **Anthropic**, and **Gemini**. Consult the [provider documentation](https://agentgateway.dev/docs/kubernetes/latest/integrations/llm/providers/) for supported APIs, models, and setup details.

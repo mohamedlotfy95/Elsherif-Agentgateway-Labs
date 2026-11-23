@@ -1,10 +1,22 @@
 # Tech with Lotfy
 
-Documentation and examples for the Tech with Lotfy learning content.
+Learning material and hands-on examples for cloud-native AI infrastructure.
 
-## Documentation
+## Agentgateway learning path
 
-- [Agent Gateway overview](docs/agent-gateway/overview.md)
-- [Create a Kubernetes cluster](docs/agent-gateway/kubernetes/create-cluster.md)
-- [Example Gateway manifest](docs/agent-gateway/kubernetes/manifests/gateway.yaml)
-- [Presentation notes](docs/presentation/notes.md)
+This workshop is for learners who know the basics of Kubernetes and want to deploy an AI gateway on a local cluster. By the end, you will be able to explain the gateway's role, deploy it on Kind, connect Gemini and Anthropic backends, and route requests by URL path.
+
+### Prerequisites
+
+- Docker, Kind, `kubectl`, Helm, `curl`, and `jq`
+- API keys for Gemini and Anthropic
+- Familiarity with Kubernetes namespaces, Secrets, and Services
+- Run the command examples from the repository root; do not commit API keys.
+
+### Lessons
+
+1. [Understand the gateway and its responsibilities](docs/agent-gateway/overview.md).
+2. [Create a Kind cluster, install Agentgateway, and configure provider backends and routes](docs/agent-gateway/kubernetes/create-cluster.md).
+3. [Test Gemini and Claude path-based routing](docs/agent-gateway/kubernetes/curl-examples.md).
+
+The [Gateway manifest](docs/agent-gateway/kubernetes/manifests/gateway.yaml) is applied in the Kubernetes setup guide.
