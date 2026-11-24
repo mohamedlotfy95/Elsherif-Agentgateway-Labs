@@ -1,4 +1,4 @@
-# Tech with Lotfy
+# Tech with Elsherif
 
 Learning material and hands-on examples for cloud-native AI infrastructure.
 
