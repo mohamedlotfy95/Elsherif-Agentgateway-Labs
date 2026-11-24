@@ -1,10 +1,14 @@
 # Agentgateway: Simple Presentation Transcript
 
-## 1. Welcome
+## 1. Introduction
 
-Hello, everyone. Today we will learn what an agent gateway does and how to use Agentgateway with Kubernetes.
+Hello everyone. In this video, we are going to learn how to use Agentgateway as an AI gateway in Kubernetes.
 
-By the end, you will know how to connect two AI providers and send requests to them through one gateway.
+In many companies, applications and AI agents connect directly to large language model providers. This means that each application may need separate API keys and provider settings. It can also make traffic harder to monitor and secure.
+
+Agentgateway gives us one central endpoint in front of our AI systems. Applications can send their requests to the gateway, and the gateway can route those requests to the right provider.
+
+By the end of this video, you will understand how the gateway works and how to route requests to Gemini and Claude.
 
 ```text
 +-------------+       +-----------------+       +--------------+
@@ -12,32 +16,35 @@ By the end, you will know how to connect two AI providers and send requests to t
 +-------------+       +-----------------+       +--------------+
 ```
 
-## 2. The problem
+## 2. What is Agentgateway?
 
-Many applications connect directly to AI providers. One application may use Gemini. Another may use Claude. Each application needs its own provider settings and API key.
+Agentgateway is an open source gateway for AI infrastructure. You can think of it as a reverse proxy that sits in front of AI services.
 
-This can make it harder to manage keys, understand where requests go, and check errors. When we use a gateway, applications can send requests to one place. The gateway can then send each request to the right provider.
+It can route requests to cloud language model providers or to local models. It can also work as an MCP router and manage traffic between AI agents.
 
-The gateway does not secure or monitor everything automatically. We must configure the right credentials, policies, and monitoring.
+The gateway adds another layer for security and monitoring. It is useful because it gives applications one place to connect to AI services.
 
-```text
-Before:                         After:
-App A -- API key --> Gemini     App A --\
-App B -- API key --> Claude               > Agentgateway --> Gemini or Claude
-Agent -- API key --> Provider   App B --/
-```
+## 3. Why use a gateway?
 
-## 3. The main Kubernetes resources
+Regular HTTP gateways usually route traffic using the URL path or headers. They are often stateless and send traffic to Kubernetes Services or external endpoints.
 
-We will use three important resources.
+AI traffic has additional needs. The gateway may need to inspect the request body to choose a model. It may also need to understand which agents are talking to each other.
 
-First, a **Gateway** opens a listener for incoming traffic.
+For MCP servers, the gateway may need to know which tools are available. Agentgateway handles these AI-specific situations as well as normal HTTP routing.
 
-Second, an **HTTPRoute** tells the Gateway where to send a request. It can match a URL path, such as `/ai/gemini`.
+In this video, we will focus on LLM routing.
 
-Third, an **AgentgatewayBackend** describes an AI provider, such as Gemini or Claude. It also refers to the Secret that holds the provider's API key.
+## 4. Gateway API resources
 
-In this lab, the Gateway is in the `default` namespace. The routes and provider backends are in the `agentgateway-system` namespace.
+We will use three main Kubernetes resources.
+
+The **Gateway** opens a listener for incoming traffic. Its listener can use HTTP on port 80.
+
+The **HTTPRoute** controls where incoming requests go. It can match a URL path and connect to a backend.
+
+The **AgentgatewayBackend** describes an AI provider, such as Gemini or Claude. It also contains the provider settings and references the Kubernetes Secret that holds the API key.
+
+In this lab, we will use the `default` namespace for the Gateway and the `agentgateway-system` namespace for the control plane, routes, backends, and Secrets.
 
 ```text
 Gateway listener :80
@@ -49,97 +56,337 @@ AgentgatewayBackend: gemini ----> Gemini
         +-- uses Secret: gemini-secret
 ```
 
-## 4. Set up the lab
+## 5. Set up the Kubernetes cluster
 
-We will use Kind to create a Kubernetes cluster on our computer. Then we will install the Gateway API resources and the Agentgateway control plane.
-
-The control plane manages the gateway configuration. We will apply a Gateway manifest and check that the Gateway is accepted and ready.
-
-Kind does not provide a public load balancer by default. We will use `kubectl port-forward` to send requests from our computer to the Gateway. Keep the port-forward command running in a separate terminal.
+We will use Kind to create a local Kubernetes cluster for testing.
 
 ```shell
-$ kind create cluster --name gatewayapi
-$ kubectl get nodes
-NAME                       STATUS
-gatewayapi-control-plane   Ready
-
-# After installing the Gateway API and Agentgateway:
-$ kubectl apply -f docs/agent-gateway/kubernetes/manifests/gateway.yaml
-$ kubectl -n default port-forward svc/agentgateway 8080:80
+kind create cluster --name gatewayapi
+kubectl get nodes
 ```
 
-## 5. Add the AI providers
+The output should show that the cluster node is ready.
 
-Next, we will create a Kubernetes Secret for each provider API key. We should not put real API keys in source files or commit them to Git.
+## 6. Install the Gateway API resources
 
-Then we will create one `AgentgatewayBackend` for Gemini and one for Claude. Each backend uses a model and refers to its provider's Secret. Before routing requests, check that both backends are accepted.
+Agentgateway needs the Kubernetes Gateway API custom resource definitions, or CRDs.
 
-```text
-$ kubectl get secrets -n agentgateway-system
-NAME               TYPE
-gemini-secret      Opaque
-anthropic-secret   Opaque
-
-$ kubectl get agentgatewaybackends.agentgateway.dev -n agentgateway-system
-NAME     ACCEPTED
-gemini   True
-claude   True
-```
-
-## 6. Route requests
-
-An HTTPRoute connects a request to a backend. A basic route can send all requests to Gemini.
-
-We can also route by URL path. In our example, requests under `/ai/gemini` go to the Gemini backend. Requests under `/ai/claude` go to the Claude backend.
-
-The path prefix is the part at the start of the URL. A request to `/ai/gemini` or to a longer path such as `/ai/gemini/chat` matches the Gemini rule.
-
-After applying the route, check its status. We want to see `Accepted=True` and `ResolvedRefs=True`. This tells us the Gateway accepted the route and found its backend references.
-
-```text
-POST /ai/gemini  ----------------> AgentgatewayBackend: gemini
-POST /ai/claude  ----------------> AgentgatewayBackend: claude
-```
-
-## 7. Test and troubleshoot
-
-Now we can use the curl examples to send one request to Gemini and another to Claude.
+Set the chart version and install the CRD chart:
 
 ```shell
-$ curl -sS http://localhost:8080/ai/gemini \
+CHART_VERSION="v1.1.0"
+
+helm upgrade -i agentgateway-crds oci://cr.agentgateway.dev/charts/agentgateway-crds \
+  --create-namespace \
+  --namespace agentgateway-system \
+  --version $CHART_VERSION
+```
+
+This gives Kubernetes the resources used for Gateways, HTTPRoutes, GatewayClasses, and Agentgateway backends.
+
+Install the Agentgateway control plane next:
+
+```shell
+helm upgrade -i agentgateway oci://cr.agentgateway.dev/charts/agentgateway \
+  --namespace agentgateway-system \
+  --version $CHART_VERSION \
+  --set controller.image.pullPolicy=Always \
+  --wait
+```
+
+The control plane watches Gateway API and Agentgateway resources. When we apply these resources, the control plane creates the gateway configuration and proxy.
+
+Check that the pods are running:
+
+```shell
+kubectl -n agentgateway-system get pods
+```
+
+## 7. Create the Gateway
+
+Apply the Gateway manifest from the repository:
+
+```shell
+kubectl apply -f docs/agent-gateway/kubernetes/manifests/gateway.yaml
+```
+
+Check the GatewayClass and Gateway:
+
+```shell
+kubectl get gatewayclass agentgateway
+kubectl get gateway agentgateway -n default
+kubectl get services -n default
+```
+
+The Gateway should report `Accepted=True` and `Programmed=True`.
+
+Kind does not provide a public load balancer by default. Start a port forward to make the Gateway available on your computer:
+
+```shell
+kubectl -n default port-forward svc/agentgateway 8080:80
+```
+
+Keep this command running while you test the routes.
+
+## 8. Configure the Gemini provider
+
+Get a Gemini API key from Google AI Studio and store it in an environment variable:
+
+```shell
+export GOOGLE_KEY="<your-gemini-api-key>"
+```
+
+Never put a real API key directly in source files or commit it to Git.
+
+Create a Kubernetes Secret for Gemini:
+
+```shell
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gemini-secret
+  namespace: agentgateway-system
+type: Opaque
+stringData:
+  Authorization: $GOOGLE_KEY
+EOF
+```
+
+Check that the Secret was created:
+
+```shell
+kubectl get secrets -n agentgateway-system
+```
+
+Next, create the Gemini backend:
+
+```shell
+kubectl apply -f - <<EOF
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayBackend
+metadata:
+  name: gemini
+  namespace: agentgateway-system
+spec:
+  ai:
+    provider:
+      gemini:
+        model: gemini-3.5-flash-lite
+  policies:
+    auth:
+      secretRef:
+        name: gemini-secret
+EOF
+```
+
+Check that the backend is accepted:
+
+```shell
+kubectl get agentgatewaybackends.agentgateway.dev -n agentgateway-system
+```
+
+## 9. Configure the Claude provider
+
+Create an Anthropic API key and save it in an environment variable:
+
+```shell
+export ANTHROPIC_API_KEY="<your-anthropic-api-key>"
+```
+
+Create a Kubernetes Secret for Claude:
+
+```shell
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: anthropic-secret
+  namespace: agentgateway-system
+type: Opaque
+stringData:
+  Authorization: $ANTHROPIC_API_KEY
+EOF
+```
+
+Create the Claude backend:
+
+```shell
+kubectl apply -f - <<EOF
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayBackend
+metadata:
+  name: claude
+  namespace: agentgateway-system
+spec:
+  ai:
+    provider:
+      anthropic:
+        model: claude-opus-4-6
+  policies:
+    auth:
+      secretRef:
+        name: anthropic-secret
+EOF
+```
+
+Check that both provider backends are accepted:
+
+```shell
+kubectl get agentgatewaybackends.agentgateway.dev -n agentgateway-system
+```
+
+## 10. Create a basic route to Gemini
+
+An HTTPRoute connects a Gateway listener to a backend. The following route sends all requests to Gemini:
+
+```shell
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: gemini
+  namespace: agentgateway-system
+spec:
+  parentRefs:
+    - name: agentgateway
+      namespace: default
+  rules:
+    - backendRefs:
+        - name: gemini
+          namespace: agentgateway-system
+          group: agentgateway.dev
+          kind: AgentgatewayBackend
+EOF
+```
+
+Agentgateway rewrites the request to the chat completions endpoint for the selected provider.
+
+Test the Gemini route:
+
+```shell
+curl -sS http://localhost:8080/v1/chat/completions \
   -H 'Content-Type: application/json' \
-  -d '{"model":"gemini-3.5-flash-lite","messages":[{"role":"user","content":"Hello"}]}'
-
-$ curl -sS http://localhost:8080/ai/claude \
-  -H 'Content-Type: application/json' \
-  -d '{"model":"claude-opus-4-6","messages":[{"role":"user","content":"Hello"}]}'
+  -d '{
+    "model": "gemini-3.5-flash-lite",
+    "messages": [
+      {"role": "user", "content": "Explain how AI works in simple terms."}
+    ]
+  }'
 ```
 
-If we see `404 route not found`, check the URL path and make sure the HTTPRoute is attached to the correct Gateway.
+The route should return an answer from Gemini. The response may also include token usage details.
 
-If a route is not accepted, check its parent reference and the Gateway listener's allowed namespaces. If a backend reference cannot be resolved, check the backend name and namespace.
+## 11. Route requests by URL path
 
-If a provider says the model is unavailable, check that the model is available to your API account.
+Next, we will update the routing rules so that different paths select different providers.
 
-```text
-$ kubectl describe httproute provider-routing -n agentgateway-system
-# Check the route's parent status for:
-# Accepted=True
-# ResolvedRefs=True
-
-# If a request returns "404 route not found":
-# Check the route path and its parent Gateway.
-```
-
-## 8. Review and clean up
-
-Today we learned how a Gateway, an HTTPRoute, and an AgentgatewayBackend work together. We also sent requests to two providers through path-based routes.
-
-When you finish the lab, delete the Kind cluster created for this lesson. This removes its Kubernetes resources, including the Secrets.
+Create an HTTPRoute named `provider-routing`:
 
 ```shell
-$ kind delete cluster --name gatewayapi
-Deleting cluster "gatewayapi" ...
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: provider-routing
+  namespace: agentgateway-system
+spec:
+  parentRefs:
+    - name: agentgateway
+      namespace: default
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /ai/gemini
+      backendRefs:
+        - name: gemini
+          namespace: agentgateway-system
+          group: agentgateway.dev
+          kind: AgentgatewayBackend
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /ai/claude
+      backendRefs:
+        - name: claude
+          namespace: agentgateway-system
+          group: agentgateway.dev
+          kind: AgentgatewayBackend
+EOF
 ```
 
-Thank you for joining. You can repeat the lab and change the route paths or provider configuration to explore further.
+A `PathPrefix` match also accepts longer paths below the same prefix. For example, `/ai/gemini/chat` will use the Gemini rule.
+
+If you keep the basic Gemini route, the more specific path rules take precedence for `/ai/gemini` and `/ai/claude`.
+
+```text
+POST /ai/gemini  ----> AgentgatewayBackend: gemini
+POST /ai/claude  ----> AgentgatewayBackend: claude
+```
+
+## 12. Test provider routing
+
+Send a request to Gemini through the Gemini path:
+
+```shell
+curl -sS http://localhost:8080/ai/gemini \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "gemini-3.5-flash-lite",
+    "messages": [
+      {"role": "user", "content": "Explain how AI works in simple terms."}
+    ]
+  }'
+```
+
+Send a request to Claude through the Claude path:
+
+```shell
+curl -sS http://localhost:8080/ai/claude \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "claude-opus-4-6",
+    "messages": [
+      {"role": "user", "content": "Explain how AI works in simple terms."}
+    ]
+  }'
+```
+
+Both providers are now available through one gateway endpoint.
+
+## 13. Check the route status
+
+Check that the HTTPRoute was accepted and that its backend references were resolved:
+
+```shell
+kubectl describe httproute provider-routing -n agentgateway-system
+```
+
+Look for `Accepted=True` and `ResolvedRefs=True`. These statuses show that the Gateway accepted the route and found the referenced backends.
+
+If you receive `404 route not found`, check the URL path and confirm that the HTTPRoute is attached to the correct Gateway.
+
+If a backend is unresolved, confirm that the `AgentgatewayBackend` exists in `agentgateway-system` and has been accepted.
+
+If a provider reports that a model is unavailable, confirm that the model is available to your API account.
+
+## 14. Review
+
+Today we learned how a Gateway, an HTTPRoute, and an AgentgatewayBackend work together.
+
+We installed Agentgateway in Kubernetes, created provider backends, and routed requests to Gemini and Claude through one endpoint.
+
+Agentgateway can also use the request body and provider-specific data for more advanced routing. This makes it useful for MCP routing and agent-to-agent traffic, which require more than basic URL-based routing.
+
+## 15. Source code and next steps
+
+You can find the source code for this lesson in the repository description. The Kubernetes examples are in the `docs/agent-gateway/kubernetes` folder.
+
+The setup guide explains how to install the Gateway and configure provider routing. The curl examples show how to test the basic and path-based routes.
+
+In a later video, we will look at MCP routing. MCP servers are becoming more common, and DevOps engineers need to know how to manage and route traffic to them in Kubernetes.
+
+You can also explore the Ultimate DevOps Roadmap and course if you want to learn more about starting a career in DevOps.
+
+Thank you for watching. See you next time.
