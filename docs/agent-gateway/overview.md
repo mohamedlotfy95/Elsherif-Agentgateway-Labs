@@ -24,6 +24,12 @@ An agent gateway can give clients a common endpoint and central place to configu
 These controls are not automatic; they must be enabled and configured for the deployment.
 
 ```text
+        +-------------+       +-----------------+       +--------------+
+        | Application | ----> | Agentgateway    | ----> | AI provider  |
+        +-------------+       +-----------------+       +--------------+
+```
+
+```text
 [User] -------------\                                  +--> [OpenAI]
 [Mobile App] --------\                                 +--> [Anthropic]
 [AI Agent] ------------> [ AGENT GATEWAY ] ------------+--> [Gemini]

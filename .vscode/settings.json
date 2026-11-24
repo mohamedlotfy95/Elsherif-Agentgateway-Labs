@@ -1,0 +1,15 @@
+{
+    "cSpell.words": [
+        "Agentgateway",
+        "agentgatewaybackends",
+        "crds",
+        "gatewayapi",
+        "gatewayclass",
+        "gatewayclasses",
+        "httproute",
+        "httproutes",
+        "tcproutes",
+        "tlsroutes",
+        "udproutes"
+    ]
+}

@@ -4,7 +4,7 @@
 
 Hello everyone. In this video, we are going to learn how to use Agentgateway as an AI gateway in Kubernetes.
 
-In many companies, applications and AI agents connect directly to large language model providers. This means that each application may need separate API keys and provider settings. It can also make traffic harder to monitor and secure.
+In many companies, users, applications and AI agents connect directly to large language model providers. This means that each application may need separate API keys and provider settings. It can also make traffic harder to monitor and secure.
 
 Agentgateway gives us one central endpoint in front of our AI systems. Applications can send their requests to the gateway, and the gateway can route those requests to the right provider.
 
